@@ -50,6 +50,19 @@ then
     fi
 fi
 
+_create_vol()
+{
+    command service glusterd status|grep runn > /dev/null 2>&1
+    if [ "$?" -eq 0 ]; then
+	pwd=`pwd`
+	hostname=`hostname -f`
+	command gluster volume create $VOLNAME $hostname:/$pwd/$BRICK_FOLDER  > /dev/null 2>&1
+	command gluster volume start $VOLNAME  > /dev/null 2>&1
+     else
+	echo "$iam: failed on gluster service status check, make sure gluster functional"
+     fi
+}
+
 # make sure we have a standard umask
 umask 022
 
@@ -61,6 +74,11 @@ elif [ "$IMGPROTO" = "nbd" ]; then
 elif [ "$IMGPROTO" = "ssh" ]; then
     TEST_IMG_FILE=$TEST_DIR/t.$IMGFMT
     TEST_IMG="ssh://127.0.0.1$TEST_IMG_FILE"
+elif [ "$IMGPROTO" = "gluster" ]; then
+    hostname=`hostname -f`
+    _create_vol
+    TEST_IMG_FILE="gluster://$hostname:0/$VOLNAME/t.$IMGFMT"
+    TEST_IMG=$TEST_IMG_FILE
 else
     TEST_IMG=$IMGPROTO:$TEST_DIR/t.$IMGFMT
 fi
@@ -125,6 +143,7 @@ _make_test_img()
     # XXX(hch): have global image options?
     $QEMU_IMG create -f $IMGFMT $extra_img_options $img_name $image_size | \
         sed -e "s#$IMGPROTO:$TEST_DIR#TEST_DIR#g" \
+            -e "s#$TEST_IMG_FILE#TEST_DIR/t.IMGFMT#g" \
             -e "s#$TEST_DIR#TEST_DIR#g" \
             -e "s#$IMGFMT#IMGFMT#g" \
             -e "s# encryption=off##g" \
@@ -167,6 +186,19 @@ _cleanup_test_img()
         sheepdog)
             collie vdi delete $TEST_DIR/t.$IMGFMT
             ;;
+
+	gluster)
+	    command yes|gluster volume stop $VOLNAME > /dev/null 2>&1 
+	    if [ "$?" = 0 ]; then
+		command yes|gluster volume delete $VOLNAME > /dev/null 2>&1 
+		if [ "$?" != 0 ]; then
+		    echo "volume delete is not successful"
+		fi
+	    else
+		echo "The volume stop is not successful"
+	    fi
+	    rm -rf $BRICK_FOLDER
+	    ;;
 
     esac
 }

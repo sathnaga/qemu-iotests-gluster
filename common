@@ -48,6 +48,8 @@ export IMGFMT=raw
 export IMGPROTO=file
 export IMGOPTS=""
 export QEMU_IO_OPTIONS=""
+export VOLNAME=""
+export BRICK_FOLDER=""
 
 for r
 do
@@ -137,6 +139,7 @@ check options
     -rbd                test rbd
     -sheepdog           test sheepdog
     -nbd                test nbd
+    -gluster            test gluster
     -ssh                test ssh
     -xdiff		graphical mode diff
     -nocache		use O_DIRECT on backing file
@@ -206,6 +209,12 @@ testlist options
 	-nbd)
 	    IMGPROTO=nbd
 	    xpand=false
+	    ;;
+	-gluster)
+	    IMGPROTO=gluster
+	    xpand=false
+	    VOLNAME=qemu_test_vol
+	    BRICK_FOLDER=qemu_test
 	    ;;
         -ssh)
             IMGPROTO=ssh
